@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "Production-ready Full-Stack Fitness & Subscription Platform with Razorpay INR payments",
   "scripts": {
+    "install": "cd client && npm install --include=dev",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "seed": "cd server && npm run seed",
-    "build": "cd client && npm install && npm run build"
+    "build": "cd client && npm install --include=dev && npm run build"
   },
   "keywords": ["fitness", "workout", "razorpay", "react", "express", "mongodb"],
   "author": "Sourish Sinha",
