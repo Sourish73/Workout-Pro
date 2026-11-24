@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
+import { API_BASE } from '../config/api';
 
 const WorkoutContext = createContext();
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const DAYS_OF_WEEK = [
   'SUNDAY',

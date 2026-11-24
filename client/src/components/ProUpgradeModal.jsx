@@ -13,8 +13,7 @@ import {
   CreditCard,
   Smartphone,
 } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { API_BASE } from '../config/api';
 
 export const ProUpgradeModal = () => {
   const { user, token, isPro, refreshUser, openAuthModal } = useAuth();
