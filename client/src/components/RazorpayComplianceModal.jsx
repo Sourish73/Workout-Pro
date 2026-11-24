@@ -23,7 +23,7 @@ export const RazorpayComplianceModal = ({ isOpen, onClose, initialTab = 'terms' 
                 Legal & Razorpay Compliance Policies
               </h3>
               <p className="text-[11px] font-mono text-zinc-400">
-                Akshita Sahu • Build With Me • Official Merchant Policies
+                Akshita • Build With Me • Official Merchant Policies
               </p>
             </div>
           </div>
@@ -113,7 +113,7 @@ export const RazorpayComplianceModal = ({ isOpen, onClose, initialTab = 'terms' 
               <h4 className="text-base font-black text-white">Pricing, Shipping & Delivery Policy</h4>
               <p className="text-xs text-zinc-400">Last updated: 2026</p>
               <div className="space-y-2 pt-1">
-                <p><strong>1. Pricing:</strong> The price for "My Weekly Gym Split (Build With Me Protocol)" is fixed at <strong>₹49 INR (inclusive of all applicable taxes)</strong> with no hidden recurring subscription charges.</p>
+                <p><strong>1. Pricing:</strong> The price for "My Weekly Gym Split (Build With Me Protocol)" is fixed at <strong>₹99 INR (inclusive of all applicable taxes)</strong> with no hidden recurring subscription charges.</p>
                 <p><strong>2. Shipping & Delivery:</strong> As this is a 100% digital workout guide and web protocol, no physical parcel is shipped. Delivery occurs <strong>instantaneously</strong> via screen unlock, automatic account sync, and immediate one-click PDF download upon verified payment.</p>
                 <p><strong>3. Access Duration:</strong> Lifetime access to the routine schedule and downloadable resources for the registered email address.</p>
               </div>

@@ -599,7 +599,7 @@ export function printWeeklyGymSplit() {
       <span class="badge">BUILD WITH ME • OFFICIAL WORKOUT SPLIT</span>
       <h1>MY WEEKLY GYM SPLIT</h1>
       <p style="font-size:13px;color:#D6D3D1;margin-top:4px;">
-        By Akshita Sahu • Instagram: @akshitaoffside_ • Fitwithakshita@gmail.com
+        By Akshita • Instagram: @akshitaoffside_ • Fitwithakshita@gmail.com
       </p>
     </div>
 
@@ -633,7 +633,7 @@ export function printWeeklyGymSplit() {
         "You don't have to be the strongest girl in the gym. You just have to keep showing up."
       </p>
       <p style="font-size:13px;font-weight:800;color:#FDE047;">
-        — Akshita Sahu • Let's build together.
+        — Akshita • Let's build together.
       </p>
     </div>
   </div>

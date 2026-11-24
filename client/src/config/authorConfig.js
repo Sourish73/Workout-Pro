@@ -6,11 +6,11 @@
 
 export const authorConfig = {
   // Personal & Brand Information
-  name: "Akshita Sahu",
+  name: "Akshita",
   title: "Fitness Programmer & Athlete",
   tagline: "Creator of 'Build With Me' • My Weekly Gym Split",
   
-  // Hero & Profile Image (Akshita Sahu Official Cover Photo)
+  // Hero & Profile Image (Akshita Official Cover Photo)
   heroImageUrl: "/cover.png",
   profileImageUrl: "/cover.png",
   
@@ -22,8 +22,8 @@ export const authorConfig = {
     numberOfResources: 1,
     resourceContent: "My Weekly Gym Split (Build With Me Protocol)",
     format: "Official Colorful PDF Guide",
-    originalPrice: "₹299",
-    currentPrice: "₹49",
+    originalPrice: "₹199",
+    currentPrice: "₹99",
   },
 
   // In-Depth Multi-Paragraph Story

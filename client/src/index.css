@@ -4,11 +4,11 @@
 
 @layer base {
   body {
-    background-color: #121217;
-    color: #F8FAFC;
+    background-color: #F4F4F6;
+    color: #18181B;
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
-    transition: background-color 0.5s ease;
+    transition: background-color 0.3s ease;
     min-height: 100vh;
   }
 }

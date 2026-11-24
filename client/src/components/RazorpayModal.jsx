@@ -38,7 +38,7 @@ import {
 export const RazorpayModal = ({
   isOpen,
   onClose,
-  amount = 49,
+  amount = 99,
   orderId = '',
   buyerEmail = '',
   buyerPhone = '',

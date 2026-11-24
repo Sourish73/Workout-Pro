@@ -14,7 +14,7 @@ const isPlaceholderKey = () => {
   return !key || key.includes('placeholder') || key === 'rzp_test_placeholder';
 };
 
-// @desc    Create Razorpay Order for ₹49 Winter Arc Guide
+// @desc    Create Razorpay Order for ₹99 Build With Me Guide
 // @route   POST /api/payment/create-order
 // @access  Public (Guest or Auth)
 export const createOrder = async (req, res) => {
@@ -28,7 +28,7 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    const priceINR = 49; // ₹49 as shown in Akshita's SuperProfile checkout
+    const priceINR = 99; // ₹99 as shown in Akshita's checkout
     const amountInPaise = priceINR * 100;
     const cleanEmail = email.toLowerCase().trim();
 
@@ -47,7 +47,7 @@ export const createOrder = async (req, res) => {
         amount: amountInPaise,
         currency: 'INR',
         status: 'created',
-        plan: 'COMPLETE_12_WEEK_WORKOUT_PLAN',
+        plan: 'BUILD_WITH_ME_GYM_SPLIT',
       });
 
       return res.json({
@@ -57,7 +57,7 @@ export const createOrder = async (req, res) => {
         currency: 'INR',
         keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
         isMockMode: true,
-        brandName: 'COMPLETE 12-WEEK WORKOUT PLAN - AKSHITA SAHU',
+        brandName: 'BUILD WITH ME - AKSHITA',
       });
     }
 
@@ -70,7 +70,7 @@ export const createOrder = async (req, res) => {
       notes: {
         buyerEmail: cleanEmail,
         buyerPhone: phone || '',
-        plan: 'WINTER_ARC_COMPLETE_GUIDE',
+        plan: 'BUILD_WITH_ME_GYM_SPLIT',
       },
     };
 
@@ -78,14 +78,14 @@ export const createOrder = async (req, res) => {
 
     await Payment.create({
       userId,
-      buyerName: name || 'Winter Arc Athlete',
+      buyerName: name || 'Athlete',
       buyerEmail: cleanEmail,
       buyerPhone: phone || '',
       razorpayOrderId: order.id,
       amount: order.amount,
       currency: order.currency,
       status: 'created',
-      plan: 'WINTER_ARC_COMPLETE_GUIDE',
+      plan: 'BUILD_WITH_ME_GYM_SPLIT',
     });
 
     return res.json({
@@ -95,7 +95,7 @@ export const createOrder = async (req, res) => {
       currency: order.currency,
       keyId: process.env.RAZORPAY_KEY_ID,
       isMockMode: false,
-      brandName: 'COMPLETE WINTER ARC GUIDE',
+      brandName: 'BUILD WITH ME - AKSHITA',
     });
   } catch (error) {
     console.error('[Create Order Error]', error);

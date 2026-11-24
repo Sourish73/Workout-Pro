@@ -100,8 +100,8 @@ export const LockedResourceModal = ({
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-100 font-mono text-xs">
             <span className="text-stone-600 font-bold">One-Time Instant Unlock:</span>
             <div className="space-x-2">
-              <span className="line-through text-stone-400">₹299</span>
-              <span className="text-lg font-black text-stone-950">₹49</span>
+              <span className="line-through text-stone-400">₹199</span>
+              <span className="text-lg font-black text-stone-950">₹99</span>
             </div>
           </div>
 
@@ -113,7 +113,7 @@ export const LockedResourceModal = ({
             className="w-full py-3.5 rounded-2xl bg-[#1C1917] hover:bg-stone-800 text-white font-black text-sm flex items-center justify-center space-x-2 transition-all shadow-md active:scale-95"
           >
             <Sparkles className="w-4 h-4 fill-white text-white" />
-            <span>Pay ₹49 & Unlock Instantly</span>
+            <span>Pay ₹99 & Unlock Instantly</span>
             <ArrowRight className="w-4 h-4 stroke-[2.5]" />
           </button>
 

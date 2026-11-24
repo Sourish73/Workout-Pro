@@ -1,37 +1,32 @@
 import React, { useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 import {
-  FileText,
-  Mail,
-  Copy,
+  Lock,
   Check,
   ArrowRight,
   ShieldCheck,
-  Lock,
-  User,
-  Heart,
-  Sparkles,
-  Crown,
-  LogOut,
-  Printer,
+  Copy,
   Download,
+  Mail,
   ExternalLink,
-  Dumbbell,
-  Calendar,
-  Zap,
-  Target,
+  Crown,
+  User,
+  LogOut,
+  Sparkles,
+  Printer,
+  FileText,
+  Tag,
+  ChevronRight,
+  HelpCircle,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { CleanScheduleView } from '../components/CleanScheduleView';
 import { LockedResourceModal } from '../components/LockedResourceModal';
 import { UnlockedResourceModal } from '../components/UnlockedResourceModal';
 import { ProperAuthModal } from '../components/ProperAuthModal';
-import { AdminDashboardModal } from '../components/AdminDashboardModal';
-import { CleanScheduleView } from '../components/CleanScheduleView';
 import { RazorpayModal } from '../components/RazorpayModal';
+import { AdminDashboardModal } from '../components/AdminDashboardModal';
 import { RazorpayComplianceModal } from '../components/RazorpayComplianceModal';
-import {
-  downloadWeeklyGymSplitPdf,
-  printWeeklyGymSplit,
-} from '../utils/generatePdf';
+import { downloadWeeklyGymSplitPdf, printWeeklyGymSplit } from '../utils/generatePdf';
 import {
   GPayLogo,
   PhonePeLogo,
@@ -49,14 +44,11 @@ import {
 import { API_BASE } from '../config/api';
 
 export const SuperProfileView = () => {
-  // Theme Mode State: 'dark' (Obsidian) vs 'pink' (Rose Noir Glow)
-  const [themeMode, setThemeMode] = useState(() => {
-    return localStorage.getItem('akshita_theme') || 'pink';
-  });
-
   // Checkout Form State
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [discountCode, setDiscountCode] = useState('');
+  const [isDiscountOpen, setIsDiscountOpen] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [paymentSuccessToast, setPaymentSuccessToast] = useState(false);
@@ -111,7 +103,7 @@ export const SuperProfileView = () => {
   const [complianceModalTab, setComplianceModalTab] = useState('terms');
   const [razorpayOrderInfo, setRazorpayOrderInfo] = useState({
     orderId: '',
-    amount: 49,
+    amount: 99,
     email: '',
     phone: '',
     name: 'Athlete',
@@ -124,7 +116,7 @@ export const SuperProfileView = () => {
         particleCount: 85,
         spread: 75,
         origin: { y: 0.6 },
-        colors: ['#CCFF00', '#F59E0B', '#10B981', '#FFFFFF'],
+        colors: ['#18181B', '#F59E0B', '#10B981', '#3B82F6'],
       });
     } catch {
       // Ignore
@@ -142,9 +134,17 @@ export const SuperProfileView = () => {
     }
   };
 
-  // Launch Payment Flow (Strictly Requires User to be Logged In)
+  // Launch Payment Flow
   const launchPayment = async (overrideEmail = '', overridePhone = '') => {
-    // STRICT FEATURE GATE: No one can pay until they are logged in
+    let buyerEmail = (overrideEmail || email || user?.email || '').trim().toLowerCase();
+    let buyerPhone = (overridePhone || phone || user?.phone || '').trim();
+
+    if (!buyerEmail) {
+      alert('Please enter your email address in the checkout box.');
+      return;
+    }
+
+    // If user is not yet logged in, prompt sign-in to attach their purchase
     if (!user) {
       setPendingPaymentAfterAuth(true);
       setAuthModalMode('signin');
@@ -152,18 +152,10 @@ export const SuperProfileView = () => {
       return;
     }
 
-    let buyerEmail = (overrideEmail || email || user?.email || '').trim().toLowerCase();
-    let buyerPhone = (overridePhone || phone || user?.phone || '').trim();
-
-    if (!buyerEmail) {
-      alert('Please enter or confirm your email address in the checkout box.');
-      return;
-    }
-
     setIsProcessingPayment(true);
 
     try {
-      // 1. Create order on backend
+      // 1. Create order on backend (₹99 = 9900 paise)
       const res = await fetch(`${API_BASE}/payment/create-order`, {
         method: 'POST',
         headers: {
@@ -179,7 +171,7 @@ export const SuperProfileView = () => {
 
       const orderData = await res.json();
       const generatedOrderId = orderData?.orderId || `order_${Date.now()}`;
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || '';
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || orderData?.keyId || '';
 
       // If user provided a real Razorpay Key ID (not placeholder), open real Razorpay Standard Checkout
       if (
@@ -189,9 +181,9 @@ export const SuperProfileView = () => {
       ) {
         const options = {
           key: razorpayKey,
-          amount: 49 * 100, // 4900 paise = ₹49
+          amount: 99 * 100, // 9900 paise = ₹99
           currency: 'INR',
-          name: 'Akshita Sahu',
+          name: 'Akshita',
           description: 'My Weekly Gym Split (Build With Me Protocol)',
           image: '/cover.png',
           order_id: generatedOrderId,
@@ -210,7 +202,7 @@ export const SuperProfileView = () => {
             contact: buyerPhone,
           },
           theme: {
-            color: '#CCFF00',
+            color: '#18181B',
           },
         };
         const rzp = new window.Razorpay(options);
@@ -225,7 +217,7 @@ export const SuperProfileView = () => {
       // Otherwise, open our realistic Light Razorpay Checkout Modal
       setRazorpayOrderInfo({
         orderId: generatedOrderId,
-        amount: 49,
+        amount: 99,
         email: buyerEmail,
         phone: buyerPhone,
         name: user?.name || 'Athlete',
@@ -237,7 +229,7 @@ export const SuperProfileView = () => {
       const fallbackOrderId = `order_${Date.now()}`;
       setRazorpayOrderInfo({
         orderId: fallbackOrderId,
-        amount: 49,
+        amount: 99,
         email: buyerEmail,
         phone: buyerPhone,
         name: user?.name || 'Athlete',
@@ -357,146 +349,80 @@ export const SuperProfileView = () => {
     ].includes(user?.email?.toLowerCase()) || user?.role === 'admin';
 
   return (
-    <div
-      className={`min-h-screen ${
-        themeMode === 'pink'
-          ? 'theme-pink text-white selection:bg-[#FF2E7E] selection:text-white'
-          : 'theme-dark text-white selection:bg-[#CCFF00] selection:text-black'
-      } pb-24 font-sans relative transition-colors duration-500`}
-    >
-      {/* Ambient subtle light glows */}
-      {themeMode === 'pink' ? (
-        <>
-          <div className="fixed top-0 left-1/4 w-[550px] h-[550px] bg-[#FF2E7E]/[0.12] rounded-full blur-[140px] pointer-events-none" />
-          <div className="fixed bottom-0 right-1/4 w-[600px] h-[600px] bg-[#FB7185]/[0.08] rounded-full blur-[160px] pointer-events-none" />
-        </>
-      ) : (
-        <>
-          <div className="fixed top-0 left-1/3 w-[500px] h-[500px] bg-[#CCFF00]/[0.035] rounded-full blur-[140px] pointer-events-none" />
-          <div className="fixed bottom-0 right-1/3 w-[550px] h-[550px] bg-amber-500/[0.03] rounded-full blur-[150px] pointer-events-none" />
-        </>
-      )}
-
+    <div className="min-h-screen bg-[#F4F4F6] text-zinc-900 pb-20 font-sans selection:bg-zinc-900 selection:text-white">
       {/* ======================================================== */}
-      {/* TOP HEADER (Adaptive for Mobile & Desktop)               */}
+      {/* TOP HEADER (Clean Dark Nav Bar matching Mobile Screenshot)*/}
       {/* ======================================================== */}
-      <header className="w-full px-4 sm:px-8 py-4 flex items-center justify-between max-w-5xl mx-auto">
-        {/* Left: Akshita Sahu pill */}
-        <div className="flex items-center space-x-2.5">
-          <div className="flex items-center space-x-2.5 px-3.5 py-1.5 rounded-full bg-white/[0.05] border border-white/10 shadow-sm">
-            <div className="w-6 h-6 rounded-full overflow-hidden bg-stone-800 border border-[#CCFF00]/40 flex items-center justify-center text-white">
-              <User className="w-3.5 h-3.5" />
+      <header className="w-full bg-[#18181B] text-white px-4 sm:px-8 py-3.5 shadow-sm">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          {/* Left: Avatar with User Icon and "Akshita ✓" */}
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-full bg-zinc-800 border-2 border-white/40 flex items-center justify-center text-white">
+              <User className="w-4 h-4" />
             </div>
-            <span className="text-xs sm:text-sm font-bold tracking-tight text-white">
-              Akshita sahu
+            <span className="text-sm font-bold tracking-tight text-white">
+              Akshita
             </span>
-            <span className="w-3.5 h-3.5 rounded-full bg-[#CCFF00] text-black flex items-center justify-center text-[9px] font-black">
+            <span className="w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center text-[10px] font-black">
               ✓
             </span>
             {isAkshitaAdmin && (
-              <span className="px-1.5 py-0.2 rounded bg-amber-400 text-black text-[10px] font-black font-mono">
+              <span className="px-2 py-0.5 rounded-full bg-amber-400 text-black text-[10px] font-black font-mono">
                 CREATOR
               </span>
             )}
           </div>
 
-          <a
-            href="https://www.instagram.com/akshitaoffside_?dmpr=MWtiMHAybHhwcGpkMw=="
-            target="_blank"
-            rel="noreferrer"
-            className="hidden sm:flex items-center space-x-1 px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-xs font-semibold border border-white/10 transition-all"
-            title="Follow Akshita on Instagram"
-          >
-            <span className={themeMode === 'pink' ? 'text-[#FF2E7E]' : 'text-[#CCFF00]'}>
-              @akshitaoffside_
-            </span>
-            <ExternalLink className="w-3 h-3 text-zinc-400" />
-          </a>
-        </div>
-
-        {/* Right Header Navigation */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Dark ↔ Pink Mode Switch Toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              const nextMode = themeMode === 'pink' ? 'dark' : 'pink';
-              setThemeMode(nextMode);
-              localStorage.setItem('akshita_theme', nextMode);
-            }}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all shadow-sm ${
-              themeMode === 'pink'
-                ? 'bg-[#FF2E7E]/15 border-[#FF2E7E]/40 text-pink-200 hover:bg-[#FF2E7E]/25 shadow-[0_0_15px_rgba(255,46,126,0.25)]'
-                : 'bg-white/[0.05] border-white/10 text-zinc-300 hover:bg-white/[0.1]'
-            }`}
-            title="Switch theme: Dark Obsidian ↔ Rose Pink"
-          >
-            {themeMode === 'pink' ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-[#FF2E7E] animate-pulse" />
-                <span className="font-mono text-[11px]">🌸 Rose Pink</span>
-              </>
-            ) : (
-              <>
-                <span className="w-2 h-2 rounded-full bg-[#CCFF00]" />
-                <span className="font-mono text-[11px]">🌙 Dark Obsidian</span>
-              </>
-            )}
-          </button>
-
-          {/* Admin Dashboard Pill for Akshita Only */}
-          {isAkshitaAdmin && (
-            <button
-              onClick={() => setIsAdminDashboardOpen(true)}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-black shadow-md transition-all active:scale-95"
-            >
-              <Crown className="w-3.5 h-3.5 fill-black" />
-              <span>Admin Orders</span>
-            </button>
-          )}
-
-          {/* User Sign In / Account Button */}
-          {user ? (
-            <div className="flex items-center space-x-2 text-xs">
-              <span className="text-zinc-300 font-medium hidden sm:inline">
-                {user.name} {hasPaid && '• Paid ✓'}
-              </span>
+          {/* Right Header Navigation */}
+          <div className="flex items-center space-x-2.5">
+            {/* Admin Dashboard Pill for Akshita Only */}
+            {isAkshitaAdmin && (
               <button
-                onClick={handleSignOut}
-                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition-colors"
-                title="Sign Out"
+                onClick={() => setIsAdminDashboardOpen(true)}
+                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black text-xs font-black shadow-sm transition-all"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <Crown className="w-3.5 h-3.5 fill-black" />
+                <span>Admin Orders</span>
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => {
-                setAuthModalMode('signin');
-                setIsAuthModalOpen(true);
-              }}
-              className="px-4 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-bold border border-white/10 transition-all"
-            >
-              Sign In
-            </button>
-          )}
+            )}
 
-          <div className="hidden sm:flex items-center space-x-1 text-xs text-zinc-500 font-medium pl-2 border-l border-white/10">
-            <span>Built with</span>
-            <Heart className={`w-3.5 h-3.5 ${themeMode === 'pink' ? 'fill-[#FF2E7E] text-[#FF2E7E]' : 'fill-[#CCFF00] text-[#CCFF00]'}`} />
-            <span className="text-zinc-300 font-semibold">on SuperProfile</span>
+            {/* User Sign In / Account Button */}
+            {user ? (
+              <div className="flex items-center space-x-2 text-xs">
+                <span className="text-zinc-300 font-medium hidden sm:inline">
+                  {user.name} {hasPaid && '• Paid ✓'}
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setAuthModalMode('signin');
+                  setIsAuthModalOpen(true);
+                }}
+                className="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all"
+              >
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Payment Success Toast */}
       {paymentSuccessToast && (
-        <div className="max-w-md mx-auto mb-4 px-4">
+        <div className="max-w-md mx-auto my-4 px-4">
           <div className="p-4 rounded-2xl bg-emerald-600 text-white shadow-xl flex items-center justify-between animate-fadeIn">
             <div className="flex items-center space-x-2.5">
               <Check className="w-5 h-5 stroke-[3]" />
               <div>
-                <p className="font-bold text-sm">Payment Successful! (₹49)</p>
+                <p className="font-bold text-sm">Payment Successful! (₹99)</p>
                 <p className="text-xs text-emerald-100">
                   Resource & 7-Day Routine Schedule Unlocked.
                 </p>
@@ -513,550 +439,397 @@ export const SuperProfileView = () => {
       )}
 
       {/* ======================================================== */}
-      {/* MAIN CONTAINER (Single Adaptive Card Layout)             */}
+      {/* MAIN CONTAINER: Clean Whitish Card Layout                 */}
       {/* ======================================================== */}
-      <main className="max-w-5xl mx-auto px-3 sm:px-6 mt-1 space-y-8">
-        <div className="transparent-card rounded-3xl p-5 sm:p-8 lg:p-10 border border-white/10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* ==================================================== */}
-            {/* LEFT COLUMN: HERO, ABOUT & RESOURCE SPECS (7 cols)   */}
-            {/* ==================================================== */}
-            <div className="lg:col-span-7 space-y-6">
-              {/* Cover Picture (Akshita Sahu Official Cover Photo) */}
-              <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] max-h-[460px] rounded-2xl overflow-hidden shadow-md border border-white/10 group bg-stone-950">
-                <img
-                  src="/cover.png"
-                  alt="My Weekly Gym Split by Akshita Sahu"
-                  className="w-full h-full object-cover object-[center_25%] group-hover:scale-102 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
-                <div className="absolute inset-0 flex flex-col items-center justify-end text-center p-4 pb-5 pointer-events-none">
-                  <span className="text-[10px] sm:text-xs font-mono uppercase tracking-[0.25em] text-[#CCFF00] font-bold drop-shadow">
-                    BUILD WITH ME
-                  </span>
-                  <h2 className="text-xl sm:text-3xl font-black text-white tracking-wider mt-0.5 drop-shadow-md">
-                    MY WEEKLY GYM SPLIT
-                  </h2>
-                  <span className="text-[11px] font-mono text-zinc-300 uppercase tracking-widest mt-0.5">
-                    BY AKSHITA SAHU
-                  </span>
-                </div>
-              </div>
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 pt-6 sm:pt-8 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          {/* ==================================================== */}
+          {/* LEFT COLUMN: HERO IMAGE & EXACT CONTENT (7 cols)      */}
+          {/* ==================================================== */}
+          <div className="lg:col-span-7 bg-white rounded-[24px] sm:rounded-[28px] p-5 sm:p-7 border border-zinc-200/90 shadow-sm space-y-6">
+            {/* Cover Picture (Clean without overlay text, matching screenshot 2) */}
+            <div className="w-full aspect-[16/10] sm:aspect-[16/9] rounded-2xl overflow-hidden shadow-sm border border-zinc-100 bg-zinc-100">
+              <img
+                src="/cover.png"
+                alt="Build With Me by Akshita"
+                className="w-full h-full object-cover object-[center_25%]"
+              />
+            </div>
 
-              {/* Title & Brand Headline */}
-              <div className="space-y-1">
-                <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-[#CCFF00]/15 border border-[#CCFF00]/30 text-[#CCFF00] text-[10px] font-black uppercase font-mono tracking-wider">
-                  OFFICIAL WORKOUT SPLIT
-                </div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
-                  My Weekly Gym Split
-                </h1>
-                <p className="text-sm font-bold text-[#CCFF00]">
-                  Build With Me • Personal Training Protocol
-                </p>
-              </div>
+            {/* Main Heading (Exact from screenshot 2) */}
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 tracking-tight">
+                BUILD WITH ME
+              </h1>
+            </div>
 
-              {/* ABOUT THE PAGE (High-End Structured Editorial Bento UI) */}
-              <div className="space-y-4 pt-1 text-zinc-200">
-                {/* Section Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className={`w-2 h-2 rounded-full ${themeMode === 'pink' ? 'bg-[#FF2E7E]' : 'bg-[#CCFF00]'} animate-pulse`} />
-                    <span className="text-xs font-mono font-black uppercase tracking-wider text-zinc-400">
-                      ABOUT THE GUIDE
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-500 uppercase">
-                    Official Protocol
-                  </span>
-                </div>
-
-                {/* 1. The Hook / Gym-Goer Problem Statement Card */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-white/[0.07] via-white/[0.03] to-transparent border border-white/10 shadow-sm relative overflow-hidden">
-                  <div className="flex items-center space-x-3.5">
-                    <div className={`w-10 h-10 rounded-2xl ${themeMode === 'pink' ? 'bg-[#FF2E7E]/15 border-[#FF2E7E]/30 text-[#FF2E7E]' : 'bg-[#CCFF00]/15 border-[#CCFF00]/30 text-[#CCFF00]'} border flex items-center justify-center shrink-0 shadow-sm`}>
-                      <Target className="w-5 h-5 stroke-[2.5]" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
-                        WHO THIS IS FOR
-                      </span>
-                      <p className="text-sm sm:text-base font-extrabold text-white leading-snug mt-0.5">
-                        If you're tired of going to the gym without a plan, this is for you.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Philosophy & Structure Bento Grid (2 Cards) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Protocol Card */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 transition-colors space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-6 h-6 rounded-lg ${themeMode === 'pink' ? 'bg-[#FF2E7E]/15 text-[#FF2E7E]' : 'bg-[#CCFF00]/15 text-[#CCFF00]'} flex items-center justify-center shrink-0`}>
-                        <Dumbbell className="w-3.5 h-3.5 stroke-[2.5]" />
-                      </div>
-                      <span className={`text-xs font-mono font-black uppercase tracking-wider ${themeMode === 'pink' ? 'text-[#FF2E7E]' : 'text-[#CCFF00]'}`}>
-                        Build With Me
-                      </span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-medium">
-                      <strong className="text-white font-bold">Build With Me</strong> is my personal weekly workout split — the routine I follow to build muscle, get stronger, and work towards my fitness goals.
-                    </p>
-                  </div>
-
-                  {/* Execution Clarity Card */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 transition-colors space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-                        <Calendar className="w-3.5 h-3.5 stroke-[2.5]" />
-                      </div>
-                      <span className="text-xs font-mono font-black uppercase tracking-wider text-emerald-400">
-                        Gym-Floor Clarity
-                      </span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-medium">
-                      I've structured each training day with specific exercises, sets, and reps so you know exactly what to do when you step into the gym.
-                    </p>
-                  </div>
-                </div>
-
-                {/* 3. "What's Inside" Redesigned Bento Grid Card */}
-                <div className="rounded-3xl bg-white/[0.03] border border-white/10 overflow-hidden shadow-md">
-                  <div className="px-5 py-3.5 bg-white/[0.03] border-b border-white/10 flex items-center justify-between">
-                    <h4 className={`text-xs font-mono font-black uppercase tracking-wider flex items-center space-x-1.5 ${themeMode === 'pink' ? 'text-[#FF2E7E]' : 'text-[#CCFF00]'}`}>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>What's inside:</span>
-                    </h4>
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold tracking-widest bg-white/[0.05] border border-white/5 px-2.5 py-0.5 rounded-full">
-                      Full Protocol Breakdown
-                    </span>
-                  </div>
-
-                  <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {[
-                      { title: '6 structured training days', tag: 'Full Weekly Split' },
-                      { title: 'Glute & hamstring focused training', tag: 'High-Tension Volume' },
-                      { title: 'Quad-focused workouts', tag: 'Strength & Drive' },
-                      { title: 'Back, arms & forearms training', tag: 'V-Taper Pull' },
-                      { title: 'Legs & shoulders', tag: 'Upper & Lower Synergy' },
-                      { title: 'Rest & recovery days', tag: 'Muscle Repair' },
-                      { title: 'Exercises, sets, reps & intensity guidance', tag: 'Form Cues & Rep Ranges', colSpan: true },
-                    ].map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-3 rounded-2xl bg-white/[0.02] border border-white/5 flex items-start space-x-2.5 transition-all hover:bg-white/[0.04] ${
-                          item.colSpan ? `sm:col-span-2 ${themeMode === 'pink' ? 'bg-[#FF2E7E]/[0.03] border-[#FF2E7E]/20' : 'bg-[#CCFF00]/[0.03] border-[#CCFF00]/20'}` : ''
-                        }`}
-                      >
-                        <div className={`w-5 h-5 rounded-lg ${themeMode === 'pink' ? 'bg-[#FF2E7E]/20 text-[#FF2E7E]' : 'bg-[#CCFF00]/20 text-[#CCFF00]'} flex items-center justify-center shrink-0 mt-0.5`}>
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-bold text-white leading-tight">
-                            {item.title}
-                          </p>
-                          <span className="text-[10px] font-mono text-zinc-400 font-semibold uppercase tracking-wider block mt-0.5">
-                            {item.tag}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 4. Training With Purpose Callout Card */}
-                <div className="p-4 rounded-2xl bg-white/[0.025] border border-white/10 flex items-center space-x-3 text-xs sm:text-sm text-zinc-200 shadow-xs">
-                  <div className="w-9 h-9 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-300 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-                  </div>
-                  <p className="leading-relaxed font-medium">
-                    Whether you're just starting your gym journey or looking for a structured routine to follow, <strong className="text-white font-bold">this is your guide to training with purpose.</strong>
-                  </p>
-                </div>
-
-                {/* Golden Highlight Quote Card */}
-                <div className="golden-quote-card p-5 sm:p-6 rounded-3xl relative overflow-hidden my-4 shadow-xl">
-                  <div className="absolute top-0 right-0 w-36 h-36 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
-                  <div className="flex items-start space-x-3.5">
-                    <div className="w-9 h-9 rounded-2xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center shrink-0 text-amber-300 font-serif text-xl font-black shadow-inner">
-                      “
-                    </div>
-                    <div className="space-y-3 flex-1">
-                      <p className="golden-gradient-text text-sm sm:text-base font-extrabold italic leading-relaxed tracking-wide">
-                        "You don't have to be the strongest girl in the gym. You just have to keep showing up."
-                      </p>
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-amber-400/25 text-xs">
-                        <span className="font-extrabold text-amber-300 font-mono tracking-wider flex items-center space-x-1.5">
-                          <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-400 inline" />
-                          <span>Akshita Sahu</span>
-                        </span>
-                        <span className="font-mono text-[11px] uppercase tracking-widest text-amber-200 font-bold bg-amber-500/20 border border-amber-400/40 px-2.5 py-0.5 rounded-full shadow-xs">
-                          Let's build together.
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* WHAT YOU'LL GET (Resource Breakdown) */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400">
-                    WHAT YOU'LL GET
-                  </span>
-                  <span className="h-px flex-1 bg-white/10" />
-                </div>
-
-                <div className="border border-white/10 rounded-2xl overflow-hidden divide-y divide-white/10 bg-white/[0.02]">
-                  <div className="p-3.5 flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-zinc-400 font-medium">Number of resources</span>
-                    <span className="font-bold text-white">1</span>
-                  </div>
-
-                  {/* Resource Content Row: Click to open Locked/Unlocked card */}
-                  <div
-                    onClick={handleResourceClick}
-                    className="p-3.5 flex items-center justify-between text-xs sm:text-sm hover:bg-white/[0.04] cursor-pointer transition-colors group select-none"
-                    title={hasPaid ? 'Click to view unlocked guide' : 'Click to preview resource'}
-                  >
-                    <span className="text-zinc-400 font-medium">Resource content</span>
-                    <div className="flex items-center space-x-2">
-                      {hasPaid ? (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center space-x-1">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                          <span>Unlocked</span>
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-xs font-bold flex items-center space-x-1">
-                          <Lock className="w-3 h-3" />
-                          <span>Locked</span>
-                        </span>
-                      )}
-                      <span className="font-bold text-white group-hover:text-[#CCFF00] transition-colors">
-                        Official PDF Guide (Build With Me)
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Resource Content Breakdown (Exclusively visible after payment) */}
-                  {hasPaid && (
-                    <div className="p-4 bg-emerald-950/20 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-300 flex items-center space-x-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Resource Content (Unlocked):</span>
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              downloadWeeklyGymSplitPdf();
-                            }}
-                            className="text-[11px] font-bold text-black bg-[#CCFF00] hover:bg-[#BBE600] px-2.5 py-0.5 rounded-lg flex items-center space-x-1 transition-colors"
-                          >
-                            <Download className="w-3 h-3 stroke-[2.5]" />
-                            <span>Download PDF</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsUnlockedResourceModalOpen(true);
-                            }}
-                            className="text-[11px] font-bold text-zinc-300 hover:text-white underline flex items-center space-x-1"
-                          >
-                            <FileText className="w-3 h-3" />
-                            <span>View Full Guide</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5 text-xs text-zinc-200 font-semibold pl-1">
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                          <span>6 structured training days</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                          <span>Glute & hamstring focused training</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                          <span>Quad-focused workouts</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                          <span>Back, arms & forearms training</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                          <span>Legs & shoulders</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                          <span>Rest & recovery days</span>
-                        </div>
-                        <div className="flex items-center space-x-2 sm:col-span-2">
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                          <span>Exercises, sets, reps & intensity guidance</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <p className="text-[11px] text-zinc-500">
-                  {hasPaid
-                    ? '✓ Resource unlocked. Click above to view or download.'
-                    : '🔒 Click resource above to inspect locked preview and payment unlock.'}
-                </p>
-              </div>
-
-              {/* Already made payment link */}
-              <div className="pt-1">
-                <p className="text-xs text-zinc-400">
-                  Already made a payment on this page?{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthModalMode('signin');
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="text-[#CCFF00] hover:underline font-bold"
-                  >
-                    Sign in to view details
-                  </button>
-                </p>
-              </div>
-
-              {/* Contact Me */}
-              <div className="pt-4 border-t border-white/10 space-y-2">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 block">
-                  CONTACT ME FOR ANY ISSUES OR QUERIES
+            {/* ABOUT THE PAGE (Exact text from screenshot 2) */}
+            <div className="pt-1 space-y-3.5 text-zinc-700">
+              <div>
+                <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-zinc-400 block">
+                  ABOUT THE PAGE
                 </span>
-                <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-zinc-300 font-semibold">
+                <h2 className="text-base sm:text-lg font-bold text-zinc-900 mt-1">
+                  My Weekly Gym Split
+                </h2>
+              </div>
+
+              <p className="text-sm text-zinc-600 leading-relaxed">
+                If you're tired of going to the gym without a plan, this is for you.
+              </p>
+
+              <p className="text-sm text-zinc-600 leading-relaxed">
+                I've structured each training day with specific exercises, sets, and reps so you know exactly what to do when you step into the gym.
+              </p>
+
+              <div className="pt-2">
+                <span className="text-sm font-semibold text-zinc-800 block mb-2">
+                  What's inside:
+                </span>
+                <ul className="text-sm text-zinc-600 space-y-1.5 pl-1">
+                  <li>- 6 structured training days</li>
+                  <li>- Rest & recovery days</li>
+                  <li>- Exercises, sets, reps & intensity guidance</li>
+                </ul>
+              </div>
+
+              <p className="text-sm text-zinc-700 font-medium pt-2">
+                Let's build together.
+              </p>
+            </div>
+
+            {/* WHAT YOU'LL GET (Resource Breakdown Box) */}
+            <div className="pt-4 border-t border-zinc-100 space-y-3">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 block">
+                WHAT YOU'LL GET
+              </span>
+
+              <div className="border border-zinc-200 rounded-2xl overflow-hidden divide-y divide-zinc-200 bg-zinc-50/60 text-xs sm:text-sm">
+                <div className="p-3.5 flex items-center justify-between">
+                  <span className="text-zinc-500 font-medium">Number of resources</span>
+                  <span className="font-bold text-zinc-900">1</span>
+                </div>
+
+                <div
+                  onClick={handleResourceClick}
+                  className="p-3.5 flex items-center justify-between hover:bg-zinc-100/60 cursor-pointer transition-colors select-none group"
+                  title={hasPaid ? 'Click to view unlocked guide' : 'Click to preview resource'}
+                >
+                  <span className="text-zinc-500 font-medium">Resource content</span>
                   <div className="flex items-center space-x-2">
-                    <Mail className="w-4 h-4 text-[#CCFF00]" />
-                    <a
-                      href="mailto:Fitwithakshita@gmail.com"
-                      className="hover:underline text-white"
-                    >
-                      Fitwithakshita@gmail.com
-                    </a>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <a
-                      href="https://www.instagram.com/akshitaoffside_?dmpr=MWtiMHAybHhwcGpkMw=="
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[#CCFF00] hover:underline font-bold"
-                    >
-                      Instagram: @akshitaoffside_
-                    </a>
+                    {hasPaid ? (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center space-x-1">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                        <span>Unlocked</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-zinc-200 text-zinc-700 text-xs font-bold flex items-center space-x-1">
+                        <Lock className="w-3 h-3" />
+                        <span>Locked</span>
+                      </span>
+                    )}
+                    <span className="font-bold text-zinc-900 group-hover:text-black transition-colors underline sm:no-underline">
+                      Official PDF Guide (Build With Me)
+                    </span>
                   </div>
                 </div>
+
+                {/* If paid, display full download action row */}
+                {hasPaid && (
+                  <div className="p-3.5 bg-emerald-50 flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-900">
+                      ✓ Access Unlocked • Ready to Save
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadWeeklyGymSplitPdf();
+                      }}
+                      className="px-3 py-1 rounded-lg bg-zinc-900 hover:bg-black text-white text-xs font-bold flex items-center space-x-1 transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* ==================================================== */}
-            {/* RIGHT COLUMN: CHECKOUT CARD (5 cols, Sticky)         */}
-            {/* ==================================================== */}
-            <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-8">
-              <div className="transparent-card-elevated rounded-3xl p-6 sm:p-7 border border-white/10 space-y-4">
-                <div className="flex items-center justify-between pb-1">
-                  <p className="text-xs sm:text-sm text-zinc-300 font-medium leading-relaxed">
-                    Access will be linked & sent to this email
-                  </p>
-                  {user && (
-                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                      ✓ Logged In
-                    </span>
-                  )}
+            {/* Contact Information */}
+            <div className="pt-4 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">
+              <div className="flex items-center space-x-1.5">
+                <Mail className="w-3.5 h-3.5 text-zinc-400" />
+                <a href="mailto:fitwithakshita@gmail.com" className="hover:text-zinc-900 transition-colors font-medium">
+                  fitwithakshita@gmail.com
+                </a>
+              </div>
+              <a
+                href="https://www.instagram.com/akshitaoffside_?dmpr=MWtiMHAybHhwcGpkMw=="
+                target="_blank"
+                rel="noreferrer"
+                className="text-zinc-600 hover:text-black font-semibold flex items-center space-x-1"
+              >
+                <span>Instagram: @akshitaoffside_</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+
+          {/* ==================================================== */}
+          {/* RIGHT COLUMN: CHECKOUT BOX (5 cols, Sticky)          */}
+          {/* ==================================================== */}
+          <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
+            <div className="bg-white rounded-[24px] sm:rounded-[28px] p-6 sm:p-7 border border-zinc-200/90 shadow-sm space-y-4">
+              <p className="text-xs sm:text-sm text-zinc-500 font-medium">
+                Access to this purchase will be sent to this email
+              </p>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  launchPayment();
+                }}
+                className="space-y-3.5"
+              >
+                {/* Email Address Input */}
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 block mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="fitwithakshita@gmail.com"
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50/60 focus:bg-white focus:border-zinc-900 focus:outline-none text-sm text-zinc-900 placeholder-zinc-400 font-medium transition-colors"
+                  />
                 </div>
 
-                {!user && (
-                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start space-x-2 text-xs">
-                    <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <div className="text-zinc-300 leading-snug">
-                      <strong className="text-amber-300">Sign in required:</strong> You must be logged in to pay ₹49 so your routine & downloads are permanently saved to your athlete account.
-                    </div>
-                  </div>
-                )}
-
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    launchPayment();
-                  }}
-                  className="space-y-3.5"
-                >
-                  <div>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Email Address"
-                      className="w-full px-4 py-3 rounded-xl border border-white/15 bg-white/[0.04] focus:border-[#CCFF00] focus:bg-white/[0.07] focus:outline-none text-sm text-white placeholder-zinc-500 font-medium transition-colors"
-                    />
-                  </div>
-
-                  <div>
+                {/* Phone Number Input */}
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 block mb-1">
+                    Phone number *
+                  </label>
+                  <div className="flex items-center rounded-xl border border-zinc-200 bg-zinc-50/60 focus-within:bg-white focus-within:border-zinc-900 transition-colors overflow-hidden">
+                    <span className="px-3 text-xs font-bold text-zinc-600 border-r border-zinc-200 bg-zinc-100/70 py-3 select-none">
+                      +91 ⌵
+                    </span>
                     <input
                       type="tel"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 Phone number *"
-                      className="w-full px-4 py-3 rounded-xl border border-white/15 bg-white/[0.04] focus:border-[#CCFF00] focus:bg-white/[0.07] focus:outline-none text-sm text-white placeholder-zinc-500 font-medium transition-colors"
+                      placeholder="9340116617"
+                      className="w-full px-3 py-3 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 font-medium focus:outline-none"
                     />
                   </div>
+                </div>
 
-                  {/* Pricing (Sub Total ₹299 ₹49 / Total ₹49) */}
-                  <div className="pt-2 border-t border-white/10 space-y-2 text-xs sm:text-sm">
-                    <div className="flex items-center justify-between text-zinc-400 font-medium">
-                      <span>Sub Total</span>
-                      <div className="space-x-1.5 font-mono">
-                        <span className="line-through text-zinc-500">₹299</span>
-                        <span className="font-bold text-white">₹49</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-base font-black text-white pt-1 border-t border-white/10">
-                      <span>Total</span>
-                      <span className={`font-mono text-xl ${themeMode === 'pink' ? 'text-[#FF2E7E]' : 'text-[#CCFF00]'}`}>
-                        ₹49
+                {/* Discount Code Collapsible Row */}
+                <div className="pt-1">
+                  {!isDiscountOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsDiscountOpen(true)}
+                      className="w-full flex items-center justify-between py-2 text-xs text-zinc-600 hover:text-zinc-900 transition-colors font-medium border-t border-zinc-100"
+                    >
+                      <span className="flex items-center space-x-1.5">
+                        <Tag className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Have a Discount Code?</span>
                       </span>
+                      <span className="font-bold text-zinc-900">Add</span>
+                    </button>
+                  ) : (
+                    <div className="pt-2 pb-1 border-t border-zinc-100 flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                        placeholder="ENTER CODE"
+                        className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 text-xs uppercase font-mono font-bold focus:outline-none focus:border-zinc-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          alert('Standard launch pricing of ₹99 is already maximum discounted.');
+                          setIsDiscountOpen(false);
+                        }}
+                        className="px-3 py-2 bg-zinc-900 text-white rounded-lg text-xs font-bold"
+                      >
+                        Apply
+                      </button>
                     </div>
+                  )}
+                </div>
+
+                {/* Pricing Summary (Exact format from Image 1) */}
+                <div className="pt-2 border-t border-zinc-100 space-y-1.5 text-xs sm:text-sm">
+                  <div className="flex items-center justify-between text-zinc-500 font-medium">
+                    <span>Sub Total</span>
+                    <span className="font-mono text-zinc-900 font-semibold">₹99</span>
                   </div>
 
-                  {/* Lightish Neon CTA Button with Login Gate Check */}
-                  <button
-                    type="submit"
-                    disabled={isProcessingPayment}
-                    className="w-full py-4 rounded-2xl btn-neon font-black text-sm flex items-center justify-center space-x-2 transition-all active:scale-98 disabled:opacity-50"
-                  >
-                    {isProcessingPayment ? (
-                      <span>Connecting Razorpay...</span>
-                    ) : hasPaid ? (
-                      <>
-                        <span>Access Granted • Download Guide</span>
-                        <ArrowRight className="w-4 h-4 stroke-[3]" />
-                      </>
-                    ) : user ? (
-                      <>
-                        <span>Proceed to Pay ₹49 →</span>
-                        <ArrowRight className="w-4 h-4 stroke-[3]" />
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4" />
-                        <span>Sign In to Unlock & Pay (₹49) →</span>
-                      </>
-                    )}
-                  </button>
-                </form>
+                  <div className="flex items-center justify-between text-zinc-900 font-bold border-t border-zinc-100 pt-1.5">
+                    <span>Total</span>
+                    <span className="font-mono text-zinc-950 font-black">₹99</span>
+                  </div>
 
-                {/* ACCEPTED PAYMENT METHODS (Well UI Oriented) */}
-                <div className="pt-3 border-t border-white/10 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase font-black tracking-wider text-zinc-400">
-                      ACCEPTED PAYMENT METHODS
+                  <div className="pt-2">
+                    <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block">
+                      Amount total
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">
-                      Instant Delivery
+                    <span className="text-2xl sm:text-3xl font-black text-zinc-950 font-mono tracking-tight block mt-0.5">
+                      ₹99
                     </span>
-                  </div>
-
-                  {/* Row 1: UPI Apps */}
-                  <div className="grid grid-cols-4 gap-1.5 p-2 rounded-2xl bg-black/40 border border-white/5">
-                    <div className="flex items-center justify-center py-1.5 px-1 rounded-xl bg-white/5" title="Google Pay">
-                      <GPayLogo className="w-4 h-4" />
-                    </div>
-                    <div className="flex items-center justify-center py-1.5 px-1 rounded-xl bg-[#5F259F]" title="PhonePe">
-                      <PhonePeLogo className="w-4 h-4" />
-                    </div>
-                    <div className="flex items-center justify-center py-1.5 px-1 rounded-xl bg-white/5" title="Paytm">
-                      <PaytmLogo className="w-7 h-3.5" />
-                    </div>
-                    <div className="flex items-center justify-center py-1.5 px-1 rounded-xl bg-white/5" title="BHIM UPI">
-                      <BhimLogo className="w-4 h-4" />
-                    </div>
-                  </div>
-
-                  {/* Row 2: Cards & Top Banks */}
-                  <div className="flex items-center justify-between gap-1 px-1">
-                    <div className="flex items-center space-x-1.5">
-                      <VisaLogo className="w-7 h-3.5" />
-                      <MastercardLogo className="w-6 h-3.5" />
-                      <RuPayLogo className="w-8 h-3.5" />
-                    </div>
-                    <div className="h-3 w-px bg-white/10" />
-                    <div className="flex items-center space-x-1.5" title="Netbanking: HDFC, ICICI, SBI, Axis">
-                      <HdfcLogo className="w-3.5 h-3.5" />
-                      <IciciLogo className="w-3.5 h-3.5" />
-                      <SbiLogo className="w-3.5 h-3.5" />
-                      <AxisLogo className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-center space-x-1.5 text-[11px] text-zinc-400 font-medium pt-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#CCFF00] shrink-0" />
-                    <span>Razorpay Verified Merchant • 256-Bit SSL Encrypted</span>
                   </div>
                 </div>
 
-                {/* INVITE YOUR NETWORK: Copy Link */}
-                <div className="pt-3 border-t border-white/10 space-y-2">
-                  <span className="block text-[11px] font-mono uppercase text-zinc-400 font-bold tracking-wider">
-                    INVITE YOUR NETWORK
-                  </span>
+                {/* Main CTA Button: "Get it now →" */}
+                <button
+                  type="submit"
+                  disabled={isProcessingPayment}
+                  className="w-full py-4 rounded-xl bg-[#18181B] hover:bg-black text-white font-bold text-sm sm:text-base flex items-center justify-between px-6 shadow-md transition-all active:scale-98 disabled:opacity-50 mt-2"
+                >
+                  {isProcessingPayment ? (
+                    <span className="w-full text-center">Connecting Razorpay...</span>
+                  ) : hasPaid ? (
+                    <>
+                      <span>Access Granted • Download Guide</span>
+                      <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                    </>
+                  ) : (
+                    <>
+                      <span>Get it now</span>
+                      <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Questions Help Text (Exact from Image 1) */}
+              <div className="pt-3 border-t border-zinc-100 text-center space-y-1">
+                <p className="text-xs text-zinc-500 font-medium">
+                  Questions before you buy? Answers come from this page.
+                </p>
+                <div className="flex items-center justify-center space-x-3 text-xs text-zinc-400">
                   <button
                     type="button"
-                    onClick={handleCopyLink}
-                    className="w-full py-3 rounded-2xl border border-white/10 hover:bg-white/5 text-xs sm:text-sm font-bold text-zinc-200 flex items-center justify-center space-x-2 transition-all active:scale-98"
+                    onClick={() => {
+                      setComplianceModalTab('shipping');
+                      setIsComplianceModalOpen(true);
+                    }}
+                    className="hover:text-zinc-700 underline"
                   >
-                    {copyFeedback ? (
-                      <>
-                        <Check className="w-4 h-4 text-[#CCFF00]" />
-                        <span className="text-[#CCFF00]">Link Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4 text-zinc-400" />
-                        <span>Copy link</span>
-                      </>
-                    )}
+                    What do I get?
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setComplianceModalTab('shipping');
+                      setIsComplianceModalOpen(true);
+                    }}
+                    className="hover:text-zinc-700 underline"
+                  >
+                    How do I get access?
                   </button>
                 </div>
+              </div>
+
+              {/* Accepted Payment Logos */}
+              <div className="pt-4 border-t border-zinc-100 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 uppercase font-bold">
+                  <span>ACCEPTED PAYMENT METHODS</span>
+                  <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                    Instant Access
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-1.5 p-2 rounded-xl bg-zinc-50 border border-zinc-100">
+                  <div className="flex items-center justify-center py-1.5 px-1 rounded-lg bg-white shadow-xs" title="Google Pay">
+                    <GPayLogo className="w-4 h-4" />
+                  </div>
+                  <div className="flex items-center justify-center py-1.5 px-1 rounded-lg bg-[#5F259F]" title="PhonePe">
+                    <PhonePeLogo className="w-4 h-4" />
+                  </div>
+                  <div className="flex items-center justify-center py-1.5 px-1 rounded-lg bg-white border border-zinc-200" title="Paytm">
+                    <PaytmLogo className="w-7 h-3.5" />
+                  </div>
+                  <div className="flex items-center justify-center py-1.5 px-1 rounded-lg bg-white shadow-xs" title="BHIM UPI">
+                    <BhimLogo className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-1 px-1 pt-1">
+                  <div className="flex items-center space-x-1.5">
+                    <VisaLogo className="w-7 h-3.5" />
+                    <MastercardLogo className="w-6 h-3.5" />
+                    <RuPayLogo className="w-8 h-3.5" />
+                  </div>
+                  <div className="h-3 w-px bg-zinc-200" />
+                  <div className="flex items-center space-x-1.5">
+                    <HdfcLogo className="w-3.5 h-3.5" />
+                    <IciciLogo className="w-3.5 h-3.5" />
+                    <SbiLogo className="w-3.5 h-3.5" />
+                    <AxisLogo className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center space-x-1.5 text-[11px] text-zinc-400 font-medium pt-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-zinc-700 shrink-0" />
+                  <span>Razorpay Verified • 256-Bit SSL Encrypted</span>
+                </div>
+              </div>
+
+              {/* INVITE YOUR NETWORK: Copy Link (Exact from Image 1) */}
+              <div className="pt-3 border-t border-zinc-100 space-y-2">
+                <span className="block text-[11px] font-mono uppercase text-zinc-400 font-bold tracking-wider">
+                  INVITE YOUR NETWORK
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="w-full py-3 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-xs sm:text-sm font-bold text-zinc-700 flex items-center justify-center space-x-2 transition-all active:scale-98"
+                >
+                  {copyFeedback ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-600" />
+                      <span className="text-emerald-700 font-bold">Link Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 text-zinc-500" />
+                      <span>Copy link</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
         </div>
 
         {/* ======================================================== */}
-        {/* EXCLUSIVE 7-DAY WORKOUT SCHEDULE (AFTER PAYMENT ONLY)    */}
+        {/* INTERACTIVE 7-DAY WORKOUT SCHEDULE                       */}
         {/* ======================================================== */}
         {hasPaid ? (
           <div
             id="unlocked-routine-schedule"
-            className="transparent-card rounded-3xl p-6 sm:p-8 animate-fadeIn border-2 border-emerald-500/30 shadow-2xl space-y-6"
+            className="bg-white rounded-[24px] sm:rounded-[28px] p-6 sm:p-8 border-2 border-emerald-500/40 shadow-sm space-y-6 animate-fadeIn"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-zinc-100 pb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shadow-sm">
                   <Check className="w-5 h-5 stroke-[3]" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase font-mono">
-                      PAYMENT SUCCESSFUL • ACCESS UNLOCKED
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase font-mono">
+                      PAYMENT VERIFIED • ACCESS UNLOCKED
                     </span>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-black text-white mt-0.5">
+                  <h3 className="text-lg sm:text-xl font-black text-zinc-900 mt-0.5">
                     Official 7-Day Workout Routine Split
                   </h3>
                 </div>
@@ -1065,93 +838,50 @@ export const SuperProfileView = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={downloadWeeklyGymSplitPdf}
-                  className="px-4 py-2 rounded-xl btn-neon text-xs font-black transition-all active:scale-95 flex items-center space-x-1.5"
+                  className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-bold transition-all active:scale-95 flex items-center space-x-1.5 shadow-sm"
                 >
                   <Download className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>Download Colorful PDF (.pdf)</span>
                 </button>
                 <button
                   onClick={printWeeklyGymSplit}
-                  className="px-3.5 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-200 text-xs font-bold transition-all active:scale-95 flex items-center space-x-1.5"
+                  className="px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-bold transition-all active:scale-95 flex items-center space-x-1.5"
                   title="Print or Save via Browser"
                 >
-                  <Printer className="w-3.5 h-3.5 text-zinc-400" />
+                  <Printer className="w-3.5 h-3.5 text-zinc-500" />
                   <span>Print / View</span>
                 </button>
               </div>
             </div>
 
-            {/* Unlocked Resource Contents Overview Banner */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-black uppercase tracking-wider text-white flex items-center space-x-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#CCFF00]" />
-                  <span>RESOURCE CONTENTS (UNLOCKED):</span>
-                </span>
-                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-bold">
-                  ✓ Full Access Granted
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-zinc-200">
-                <div className="flex items-center space-x-2">
-                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                  <span>6 structured training days</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                  <span>Glute & hamstring focused training</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                  <span>Quad-focused workouts</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                  <span>Back, arms & forearms training</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                  <span>Legs & shoulders</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                  <span>Rest & recovery days</span>
-                </div>
-                <div className="flex items-center space-x-2 sm:col-span-2">
-                  <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3] shrink-0" />
-                  <span>Exercises, sets, reps & intensity guidance</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Clean Schedule View (No complex reps count inputs) */}
+            {/* Clean Schedule View Component */}
             <CleanScheduleView />
           </div>
         ) : null}
       </main>
 
       {/* ======================================================== */}
-      {/* RAZORPAY COMPLIANCE FOOTER (Required for Live Activation) */}
+      {/* RAZORPAY COMPLIANCE FOOTER (Required for Activation)      */}
       {/* ======================================================== */}
-      <footer className="max-w-5xl mx-auto px-4 sm:px-6 pt-12 pb-10 border-t border-white/10 mt-14 text-zinc-300 space-y-6">
+      <footer className="max-w-5xl mx-auto px-4 sm:px-6 pt-12 pb-8 border-t border-zinc-200 mt-16 text-zinc-600 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div className="flex items-center space-x-3">
-            <div className={`w-8 h-8 rounded-full ${themeMode === 'pink' ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border-[#FF2E7E]/40' : 'bg-[#CCFF00]/20 text-[#CCFF00] border-[#CCFF00]/40'} border flex items-center justify-center font-black text-xs shadow-sm`}>
+            <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center font-black text-xs shadow-sm">
               AS
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-black text-sm text-white tracking-tight">Akshita Sahu</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#CCFF00]" />
-                <span className="text-xs font-mono font-bold text-zinc-300">Build With Me</span>
+                <span className="font-bold text-sm text-zinc-900 tracking-tight">Akshita</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                <span className="text-xs font-mono font-medium text-zinc-500">Build With Me</span>
               </div>
-              <p className="text-[11px] font-mono text-zinc-400 mt-0.5">
-                Official Weekly Gym Split • Creator Protocol Storefront
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Official Weekly Gym Split • Digital Creator Storefront
               </p>
             </div>
           </div>
 
-          {/* Bold, Prominent Policy Buttons */}
+          {/* Legal Compliance Buttons */}
           <div className="flex flex-wrap items-center gap-2">
             {[
               { id: 'terms', label: 'Terms & Conditions' },
@@ -1166,9 +896,7 @@ export const SuperProfileView = () => {
                   setComplianceModalTab(btn.id);
                   setIsComplianceModalOpen(true);
                 }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black text-white bg-white/[0.06] hover:bg-white/[0.14] border border-white/15 hover:border-white/30 transition-all shadow-sm active:scale-95 ${
-                  themeMode === 'pink' ? 'hover:border-[#FF2E7E]/50' : 'hover:border-[#CCFF00]/50'
-                }`}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-700 bg-white hover:bg-zinc-100 border border-zinc-200 transition-all shadow-2xs active:scale-95"
               >
                 {btn.label}
               </button>
@@ -1176,10 +904,10 @@ export const SuperProfileView = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-white/10 text-xs font-bold text-zinc-400">
-          <p>© 2026 Akshita Sahu (@akshitaoffside_). All rights reserved.</p>
-          <div className="flex items-center space-x-1.5 text-emerald-400 font-mono text-[11px] font-black bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 shadow-xs">
-            <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-zinc-200 text-xs text-zinc-400">
+          <p>© 2026 Akshita (@akshitaoffside_). All rights reserved.</p>
+          <div className="flex items-center space-x-1.5 text-zinc-600 font-mono text-[11px] font-semibold bg-zinc-100 px-3 py-1 rounded-full border border-zinc-200">
+            <ShieldCheck className="w-3.5 h-3.5 text-zinc-700 shrink-0" />
             <span>Payments Processed via Razorpay (RBI Regulated Gateway)</span>
           </div>
         </div>
@@ -1214,7 +942,7 @@ export const SuperProfileView = () => {
       <RazorpayModal
         isOpen={isRazorpayModalOpen}
         onClose={() => setIsRazorpayModalOpen(false)}
-        amount={razorpayOrderInfo.amount || 49}
+        amount={razorpayOrderInfo.amount || 99}
         orderId={razorpayOrderInfo.orderId}
         buyerEmail={razorpayOrderInfo.email || email}
         buyerPhone={razorpayOrderInfo.phone || phone}
@@ -1236,3 +964,5 @@ export const SuperProfileView = () => {
     </div>
   );
 };
+
+export default SuperProfileView;
