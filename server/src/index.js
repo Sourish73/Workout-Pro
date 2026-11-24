@@ -21,26 +21,55 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const APP_NAME = process.env.APP_NAME || 'COMPLETE 12-WEEK WORKOUT PLAN';
 
-// Enable CORS
+// Enable Bulletproof CORS for Vercel, Localhost & Custom Domains
 const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
+  'https://akshita-sahu.vercel.app',
+  'https://workout-pro.vercel.app',
+  'https://workout-pro-two.vercel.app',
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
-];
+].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')
+      ) {
         return callback(null, true);
       }
       return callback(null, true);
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
+
+// Preflight OPTIONS for all routes
+app.options('*', cors());
+
+// Direct header fallback middleware to guarantee no browser CORS rejection
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 // Raw body parser exclusively for Razorpay Webhook HMAC signature verification
 app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
